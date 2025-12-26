@@ -9,6 +9,7 @@ import MessageBubble from "../components/MessageBubble";
 import { v4 as uuidv4 } from "uuid";
 import { Spinner } from "../components/ui/spinner";
 import { useNavigate } from "react-router";
+import AudioRecorder from "../components/AudioRecorder";
 
 function Chat() {
     // --- State Management ---
@@ -17,6 +18,7 @@ function Chat() {
     const [messages, setMessages] = useState([]);
     const [draft, setDraft] = useState("");
     const [sending, setSending] = useState(false);
+
 
     const endRef = useRef(null);
     const inputRef = useRef(null);
@@ -146,6 +148,7 @@ function Chat() {
         }
     };
 
+
     return (
         // Fixed: added 'h-screen' and 'overflow-hidden' to the main wrapper
         <div className="fixed top-0 left-0 right-0 mx-auto h-screen max-w-7xl grid grid-cols-1 md:grid-cols-[300px_1fr] border-x overflow-hidden">
@@ -269,6 +272,13 @@ function Chat() {
                             onChange={(e) => setDraft(e.target.value)}
                             placeholder="Message Brio..."
                             className="flex-1 rounded-xl h-12 bg-muted/50 border-none focus-visible:ring-1"
+                        />
+                        <AudioRecorder
+                            onTranscription={(text) => {
+                                setDraft(text); // Put transcribed text into input
+                                // Optional: sendMessages(); // Auto-send if you want it to be hands-free
+                                inputRef.current?.focus();
+                            }}
                         />
                         <Button
                             disabled={sending}
