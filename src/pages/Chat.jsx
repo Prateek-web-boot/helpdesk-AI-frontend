@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Spinner } from "../components/ui/spinner";
 import { useNavigate } from "react-router";
 import AudioRecorder from "../components/AudioRecorder";
+import axios from "../api/axios";
 
 function Chat() {
     // --- State Management ---
@@ -29,9 +30,8 @@ function Chat() {
     // --- 1. Fetch Sidebar History ---
     const fetchSidebar = async () => {
         try {
-            const res = await fetch(`http://localhost:8080/api/v1/helpdesk/conversations?email=${userEmail}`);
-            const data = await res.json();
-            setConversations(data);
+            const res = await axios.get(`/conversations?email=${userEmail}`);
+            setConversations(res.data);
         } catch (err) {
             console.error("Failed to load sidebar", err);
         }
@@ -51,8 +51,8 @@ function Chat() {
     const selectConversation = async (convo) => {
         setActiveChatId(convo.id);
         try {
-            const res = await fetch(`http://localhost:8080/api/v1/helpdesk/conversations/${convo.id}/messages`);
-            const history = await res.json();
+            const res = await axios.get(`/conversations/${convo.id}/messages`);
+            const history = res.data;
 
             // Map Spring AI DTO (role/content) to UI format (author/text)
             const formatted = history.map(msg => ({
@@ -102,7 +102,7 @@ function Chat() {
         setMessages((prev) => [...prev, userMsgObj]);
 
         try {
-            const response = await fetch("http://localhost:8080/api/v1/helpdesk/chat", {
+            const response = await axios.post("/chat", textMessage,{
                 method: "POST",
                 headers: {
                     "Content-Type": "text/plain",
@@ -112,7 +112,7 @@ function Chat() {
                 body: textMessage
             });
 
-            const aiResponseText = await response.text();
+            const aiResponseText = response.data;
 
             // Add bot response to UI
             setMessages((prev) => [

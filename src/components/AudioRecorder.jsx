@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { Mic, Loader2, StopCircle } from "lucide-react";
 import { Button } from "./ui/button";
-import axios from "axios";
+import axios from "../api/axios";
 
 function AudioRecorder({ onTranscription }) {
     const [isRecording, setIsRecording] = useState(false);
@@ -41,7 +41,7 @@ function AudioRecorder({ onTranscription }) {
         const formData = new FormData();
         formData.append("file", blob, "recording.wav");
         try {
-            const res = await axios.post("http://localhost:8080/api/v1/helpdesk/transcribe", formData, {
+            const res = await axios.post("/transcribe", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
             onTranscription(res.data);
