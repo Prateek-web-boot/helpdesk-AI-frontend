@@ -84,8 +84,14 @@ function Chat() {
         inputRef.current?.focus();
     };
 
+
+    const[error, setError] = useState("");
+
     // --- 4. Send Message Logic ---
     async function sendMessages() {
+        setError("");
+
+
         const textMessage = draft.trim();
         if (!textMessage || sending) return;
 
@@ -129,11 +135,23 @@ function Chat() {
             fetchSidebar();
 
         } catch (error) {
-            console.error("AI Service Error:", error);
+            if(error.response && error.response.status === 429) {
+                setError("Whoa! You're sending messages too fast. Please wait a minute.");
+            } else {
+                setError("Something went wrong. Please try again later.");
+            }
         } finally {
             setSending(false);
             inputRef.current?.focus();
         }
+    }
+
+    {
+        error && (
+            <div className="p-2 mb-4 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg">
+                {error}
+            </div>
+        )
     }
 
     // Scroll to bottom helper
