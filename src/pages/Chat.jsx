@@ -136,6 +136,12 @@ function Chat() {
 
         } catch (error) {
             if(error.response && error.response.status === 429) {
+                setMessages((prev) => [...prev, {
+                    id: uuidv4(),
+                    author: "bot",
+                    text: "⚠️ Slow down! You've reached your message limit for now. Please try again in a few minutes.",
+                    at: new Date().toLocaleTimeString(),
+                }]);
                 setError("Whoa! You're sending messages too fast. Please wait a minute.");
             } else {
                 setError("Something went wrong. Please try again later.");
