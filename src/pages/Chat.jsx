@@ -109,13 +109,11 @@ function Chat() {
 
         try {
             const response = await axios.post("/chat", textMessage,{
-                method: "POST",
                 headers: {
                     "Content-Type": "text/plain",
                     "conversationId": activeChatId,
                     "userEmail": userEmail
-                },
-                body: textMessage
+                }
             });
 
             const aiResponseText = response.data;
