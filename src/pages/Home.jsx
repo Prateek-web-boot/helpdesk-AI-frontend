@@ -3,6 +3,7 @@ import { BrainCircuit, Bot, Ticket } from "lucide-react";
 import { useNavigate } from "react-router";
 import { Button } from "../components/ui/button";
 import { Input } from "@/components/ui/input.jsx";
+import docsApi from "../api/docsApi";
 import {
     Card,
     CardContent,
@@ -19,8 +20,31 @@ function Home() {
     const [email, setEmail] = useState(() => localStorage.getItem("userEmail") ?? "");
     const [mode, setMode] = useState(() => localStorage.getItem("chatMode") === CHAT_MODES.RAG ? CHAT_MODES.RAG : CHAT_MODES.TICKET);
     const [project, setProject] = useState(() => localStorage.getItem("ragProject") ?? "");
+    const [projectOptions, setProjectOptions] = useState([]);
+    const [loadingProjects, setLoadingProjects] = useState(false);
     const [error, setError] = useState("");
     const navigate = useNavigate();
+
+    const loadProjects = React.useCallback(async () => {
+        setLoadingProjects(true);
+        try {
+            const response = await docsApi.get("/docs/projects");
+            const projects = Array.isArray(response.data) ? response.data : [];
+            setProjectOptions(projects);
+            setProject((current) => current || (projects.length > 0 ? projects[0] : ""));
+        } catch (err) {
+            console.error("Failed to load projects", err);
+            setProjectOptions([]);
+        } finally {
+            setLoadingProjects(false);
+        }
+    }, []);
+
+    React.useEffect(() => {
+        if (mode === CHAT_MODES.RAG) {
+            loadProjects();
+        }
+    }, [mode, loadProjects]);
 
     const handleStart = () => {
         const trimmedEmail = email.trim();
@@ -146,17 +170,49 @@ function Home() {
 
                                 {mode === CHAT_MODES.RAG && (
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium">Project</label>
-                                        <Input
-                                            placeholder="billing-api, help-center, onboarding..."
-                                            value={project}
-                                            onChange={(e) => {
-                                                setProject(e.target.value);
-                                                setError("");
-                                            }}
-                                        />
+                                        <div className="mb-2 flex items-center justify-between gap-3">
+                                            <label className="block text-sm font-medium">Project</label>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 px-3 text-xs text-muted-foreground"
+                                                onClick={loadProjects}
+                                            >
+                                                Refresh
+                                            </Button>
+                                        </div>
+                                        <div className="relative">
+                                            <select
+                                                value={project}
+                                                onChange={(e) => {
+                                                    setProject(e.target.value);
+                                                    setError("");
+                                                }}
+                                                className="flex h-10 w-full appearance-none rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none ring-offset-background transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                                                disabled={loadingProjects}
+                                            >
+                                                <option value="">
+                                                    {loadingProjects
+                                                        ? "Loading projects..."
+                                                        : "Select a project from uploaded docs"}
+                                                </option>
+                                                {[...new Set([...(projectOptions || []), ...(project ? [project] : [])])]
+                                                    .filter(Boolean)
+                                                    .map((name) => (
+                                                        <option key={name} value={name}>
+                                                            {name}
+                                                        </option>
+                                                    ))}
+                                            </select>
+                                        </div>
+                                        {!loadingProjects && projectOptions.length === 0 && (
+                                            <p className="mt-2 text-xs text-amber-700">
+                                                No uploaded projects found yet. Upload a document first, then come back here.
+                                            </p>
+                                        )}
                                         <p className="mt-2 text-xs text-muted-foreground">
-                                            This scopes RAG to the document set that belongs to a single project.
+                                            This list comes from the projects already ingested into the system.
                                         </p>
                                     </div>
                                 )}
