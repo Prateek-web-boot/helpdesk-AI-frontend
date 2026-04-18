@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Search, MoreVertical, Send, Plus, LogOut } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeftRight, BrainCircuit, Search, MoreVertical, Send, Plus, LogOut, Ticket } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Separator } from "../components/ui/separator";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import MessageBubble from "../components/MessageBubble";
 import { v4 as uuidv4 } from "uuid";
 import { Spinner } from "../components/ui/spinner";
@@ -15,27 +15,39 @@ import axios from "../api/axios";
 function Chat() {
     // --- State Management ---
     const [conversations, setConversations] = useState([]); // Real sidebar data
-    const [activeChatId, setActiveChatId] = useState(null); // The UUID of current session
-    const [messages, setMessages] = useState([]);
+    const [activeChatId, setActiveChatId] = useState(() => uuidv4()); // The UUID of current session
+    const [messages, setMessages] = useState(() => [
+        {
+            id: uuidv4(),
+            author: "bot",
+            text: "Hello! I am your AI assistant. How can I help you today?",
+            at: new Date().toLocaleTimeString(),
+        }
+    ]);
     const [draft, setDraft] = useState("");
     const [sending, setSending] = useState(false);
+    const [chatMode] = useState(() => localStorage.getItem("chatMode") === "RAG" ? "RAG" : "TICKET");
+    const [ragProject] = useState(() => localStorage.getItem("ragProject") ?? "");
+    const [userEmail] = useState(() => localStorage.getItem("userEmail") ?? "");
 
 
     const endRef = useRef(null);
     const inputRef = useRef(null);
     const navigate = useNavigate();
 
-    const userEmail = localStorage.getItem("userEmail");
-
     // --- 1. Fetch Sidebar History ---
-    const fetchSidebar = async () => {
+    const fetchSidebar = useCallback(async () => {
+        if (!userEmail) {
+            return;
+        }
+
         try {
             const res = await axios.get(`/conversations?email=${userEmail}`);
             setConversations(res.data);
         } catch (err) {
             console.error("Failed to load sidebar", err);
         }
-    };
+    }, [userEmail]);
 
     // Initialize: Check login and load sidebar
     useEffect(() => {
@@ -43,12 +55,13 @@ function Chat() {
             navigate("/");
             return;
         }
+
         fetchSidebar();
-        handleNewChat(); // Start with a fresh chat session by default
-    }, []);
+    }, [fetchSidebar, navigate, userEmail]);
 
     // --- 2. Fetch Messages when a Sidebar Item is Clicked ---
     const selectConversation = async (convo) => {
+        setError("");
         setActiveChatId(convo.id);
         try {
             const res = await axios.get(`/conversations/${convo.id}/messages`);
@@ -70,6 +83,7 @@ function Chat() {
 
     // --- 3. Start a New Empty Chat ---
     const handleNewChat = () => {
+        setError("");
         const newId = uuidv4();
         setActiveChatId(newId);
         setMessages([
@@ -95,6 +109,11 @@ function Chat() {
         const textMessage = draft.trim();
         if (!textMessage || sending) return;
 
+        if (chatMode === "RAG" && !ragProject.trim()) {
+            setError("Pick a project before sending a RAG question.");
+            return;
+        }
+
         setDraft(""); // Immediate UI feedback
         setSending(true);
 
@@ -108,9 +127,12 @@ function Chat() {
         setMessages((prev) => [...prev, userMsgObj]);
 
         try {
-            const response = await axios.post("/chat", textMessage,{
+            const response = await axios.post("/chat", {
+                uQuery: textMessage,
+                mode: chatMode,
+                project: chatMode === "RAG" ? ragProject.trim() : "",
+            },{
                 headers: {
-                    "Content-Type": "text/plain",
                     "conversationId": activeChatId,
                     "userEmail": userEmail
                 }
@@ -148,14 +170,6 @@ function Chat() {
             setSending(false);
             inputRef.current?.focus();
         }
-    }
-
-    {
-        error && (
-            <div className="p-2 mb-4 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg">
-                {error}
-            </div>
-        )
     }
 
     // Scroll to bottom helper
@@ -258,8 +272,47 @@ function Chat() {
                             </div>
                         </div>
                     </div>
-                    <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => navigate("/")}
+                            className="hidden items-center gap-3 rounded-full border bg-muted/40 px-3 py-2 text-left transition hover:bg-accent sm:flex"
+                        >
+                            <span
+                                className={`h-2.5 w-2.5 rounded-full ${
+                                    chatMode === "RAG" ? "bg-amber-500" : "bg-slate-900"
+                                }`}
+                            />
+                            <div className="leading-tight">
+                                <div className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                                    {chatMode === "RAG" ? (
+                                        <BrainCircuit className="h-3.5 w-3.5" />
+                                    ) : (
+                                        <Ticket className="h-3.5 w-3.5" />
+                                    )}
+                                    {chatMode === "RAG" ? "RAG mode" : "Ticket mode"}
+                                </div>
+                                {chatMode === "RAG" && ragProject ? (
+                                    <div className="max-w-44 truncate text-xs text-muted-foreground">
+                                        {ragProject}
+                                    </div>
+                                ) : null}
+                            </div>
+                            <ArrowLeftRight className="h-3.5 w-3.5 text-muted-foreground" />
+                        </button>
+                        <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </header>
+
+                {error && (
+                    <div className="mx-auto mt-3 w-full max-w-3xl px-6">
+                        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                            {error}
+                        </div>
+                    </div>
+                )}
 
                 {/* Messages Area - The flex-1 is critical here */}
                 <ScrollArea className="flex-1 h-[calc(100vh-160px)] w-full">
