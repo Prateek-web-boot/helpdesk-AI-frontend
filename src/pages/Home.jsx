@@ -3,7 +3,7 @@ import { BrainCircuit, Bot, Ticket } from "lucide-react";
 import { useNavigate } from "react-router";
 import { Button } from "../components/ui/button";
 import { Input } from "@/components/ui/input.jsx";
-import docsApi from "../api/docsApi";
+import api from "../api/axios";
 import {
     Card,
     CardContent,
@@ -22,19 +22,22 @@ function Home() {
     const [project, setProject] = useState(() => localStorage.getItem("ragProject") ?? "");
     const [projectOptions, setProjectOptions] = useState([]);
     const [loadingProjects, setLoadingProjects] = useState(false);
+    const [projectLoadError, setProjectLoadError] = useState("");
     const [error, setError] = useState("");
     const navigate = useNavigate();
 
     const loadProjects = React.useCallback(async () => {
         setLoadingProjects(true);
+        setProjectLoadError("");
         try {
-            const response = await docsApi.get("/docs/projects");
+            const response = await api.get("/projects");
             const projects = Array.isArray(response.data) ? response.data : [];
             setProjectOptions(projects);
             setProject((current) => current || (projects.length > 0 ? projects[0] : ""));
         } catch (err) {
             console.error("Failed to load projects", err);
             setProjectOptions([]);
+            setProjectLoadError("Could not load project names from the backend.");
         } finally {
             setLoadingProjects(false);
         }
@@ -209,6 +212,11 @@ function Home() {
                                         {!loadingProjects && projectOptions.length === 0 && (
                                             <p className="mt-2 text-xs text-amber-700">
                                                 No uploaded projects found yet. Upload a document first, then come back here.
+                                            </p>
+                                        )}
+                                        {projectLoadError && (
+                                            <p className="mt-2 text-xs text-red-700">
+                                                {projectLoadError}
                                             </p>
                                         )}
                                         <p className="mt-2 text-xs text-muted-foreground">
