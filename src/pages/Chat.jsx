@@ -270,6 +270,9 @@ function Chat() {
                                     <span className="text-green-500">Online</span>
                                 )}
                             </div>
+                            <div className="text-[11px] text-muted-foreground">
+                                RAG and ticket tools only
+                            </div>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">

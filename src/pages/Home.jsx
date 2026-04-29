@@ -171,6 +171,10 @@ function Home() {
                                     </div>
                                 </div>
 
+                                <div className="rounded-2xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+                                    Production mode keeps chat focused on ticket handling and RAG answers. File export is handled outside the chat runtime.
+                                </div>
+
                                 {mode === CHAT_MODES.RAG && (
                                     <div>
                                         <div className="mb-2 flex items-center justify-between gap-3">
